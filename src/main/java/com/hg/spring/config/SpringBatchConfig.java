@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import com.hg.spring.entity.Customer;
@@ -105,6 +107,8 @@ public class SpringBatchConfig {
 				.reader(reader())
 				.processor(processor())
 				.writer(writer())
+				// Sử dụng TaskExecutor để thực hiện các tác vụ không đồng bộ. TaskExecutor được định nghĩa trước đó (sử dụng SimpleAsyncTaskExecutor) và giới hạn số lượng luồng đồng thời là 10. Điều này cho phép xử lý song song nhiều chunk, nâng cao hiệu suất xử lý.
+				.taskExecutor(taskExecutor())
 				// Hoàn tất việc xây dựng step và trả về đối tượng Step.
 				.build();
 	}
@@ -120,5 +124,17 @@ public class SpringBatchConfig {
 		 */
 		return new JobBuilder("importCustomers", jobRepository)
 				.flow(step1(jobRepository, platformTransactionManager)).end().build();
+	}
+	
+	// TaskExecutor là một interface của Spring cho phép thực thi các tác vụ (tasks) trong một ứng dụng theo cách không đồng bộ.
+	@Bean
+	public TaskExecutor taskExecutor() {
+		// SimpleAsyncTaskExecutor là một trong những triển khai đơn giản của TaskExecutor. Nó không thực sự quản lý một pool (bộ luồng) các luồng mà mỗi lần nó nhận được một task, nó sẽ tạo ra một luồng mới để thực thi task đó.
+		// Đây không phải là lựa chọn tối ưu cho các ứng dụng đòi hỏi hiệu suất cao vì nó không tái sử dụng các luồng đã tạo, nhưng thích hợp cho các tình huống đơn giản hoặc khi không cần quá nhiều kiểm soát về luồng.
+		SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
+		// Giới hạn số lượng luồng có thể chạy đồng thời ở mức 10. Điều này có nghĩa là sẽ có tối đa 10 luồng chạy đồng thời; nếu có hơn 10 tác vụ được gửi đến SimpleAsyncTaskExecutor, các tác vụ sẽ bị tạm dừng cho đến khi có một luồng trống.
+		asyncTaskExecutor.setConcurrencyLimit(10);
+		// Đối tượng SimpleAsyncTaskExecutor được trả về và sẽ được Spring quản lý như một bean. Khi các thành phần khác trong ứng dụng cần sử dụng một TaskExecutor, Spring sẽ tiêm (inject) đối tượng này vào.
+		return asyncTaskExecutor;
 	}
 }

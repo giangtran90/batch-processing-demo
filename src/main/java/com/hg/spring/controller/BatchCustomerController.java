@@ -27,7 +27,7 @@ public class BatchCustomerController {
 	private Job job;
 	
 	@PostMapping("/importCustomers")
-	public void importCsvToDB() {
+	public String importCsvToDB() {
 		// Dùng để tạo ra một tập các job parameters (tham số) cần thiết để khởi chạy job. Trong trường hợp này, một tham số duy nhất startAt được thêm vào, chứa thời gian hiện tại (thông qua System.currentTimeMillis()).
 		JobParameters jobParameters = new JobParametersBuilder()
 				.addLong("startAt", System.currentTimeMillis()).toJobParameters();
@@ -45,5 +45,6 @@ public class BatchCustomerController {
 			e.printStackTrace();
 		}
 
+		return "Import Success";
 	}
 }
