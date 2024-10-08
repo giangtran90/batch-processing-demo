@@ -14,7 +14,11 @@ public class CustomerProcessor implements ItemProcessor<Customer, Customer>{
 	// Phương thức process() nhận đầu vào là một đối tượng Customer và trả về một đối tượng Customer sau khi xử lý.
 	@Override
 	public Customer process(Customer customer) throws Exception {
-		return customer;
+		if (customer.getCountry().equals("Ukraine")) {
+			return customer;
+		} else {
+			return null;
+		}	
 	}
 
 }
